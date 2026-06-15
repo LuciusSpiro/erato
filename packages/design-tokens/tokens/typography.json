@@ -1,0 +1,16 @@
+{
+  "type": {
+    "body": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": "{font.family.sans}",
+        "fontSize": "{font.size.300}",
+        "fontWeight": 400,
+        "lineHeight": 1.65
+      }
+    },
+    "h1": { "$type": "typography", "$value": { "fontFamily": "{font.family.sans}", "fontSize": "{font.size.600}", "fontWeight": 600, "lineHeight": 1.25 } },
+    "h2": { "$type": "typography", "$value": { "fontFamily": "{font.family.sans}", "fontSize": "{font.size.500}", "fontWeight": 600, "lineHeight": 1.3 } },
+    "h3": { "$type": "typography", "$value": { "fontFamily": "{font.family.sans}", "fontSize": "{font.size.400}", "fontWeight": 600, "lineHeight": 1.35 } }
+  }
+}

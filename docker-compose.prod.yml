@@ -1,0 +1,57 @@
+# Erato — Produktions-Override. Zusammen mit der Basis verwenden:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Unterschiede zum Dev-Setup:
+#  - erato-web läuft als nginx-Container (statt npm dev) und wird gebaut.
+#  - Caddy ist der vorgelagerte Reverse-Proxy (Single-Origin, TLS-fähig).
+#  - erato-mcp ist als Tool-Profil definiert (vom AI-Client per stdio gestartet).
+# Hinweis: Für Prod-Login muss der Realm Redirect-URIs für PUBLIC_WEB_ORIGIN enthalten
+# (in docker/keycloak/erato-realm.json bereits ergänzt; greift bei frischem KC-Volume).
+
+services:
+  erato-web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        VITE_API_URL: ""   # gleicher Origin → /v1 relativ (nginx proxyt zu erato-api)
+        VITE_OIDC_AUTHORITY: ${OIDC_PUBLIC_ISSUER:-http://localhost:8085/realms/erato}
+        VITE_OIDC_CLIENT: erato-web
+    container_name: erato-web
+    expose:
+      - "80"
+    depends_on:
+      - erato-api
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: erato-caddy
+    ports:
+      - "8088:8088"   # Prod mit Domain: stattdessen "80:80" und "443:443"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - erato-web
+
+  # MCP-Server: vom AI-Client per stdio gestartet, nicht als Dauerdienst.
+  # Image bauen:  docker compose -f docker-compose.yml -f docker-compose.prod.yml build erato-mcp
+  # Starten:      docker compose ... run --rm erato-mcp
+  erato-mcp:
+    build: ./mcp
+    image: erato-mcp
+    profiles: ["tools"]
+    environment:
+      ERATO_API_URL: http://erato-api:3001
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/erato/protocol/openid-connect/token
+      ERATO_USER: ${MCP_USER:-christian}
+      ERATO_PASS: ${MCP_PASS:-erato}
+    stdin_open: true
+    tty: true
+    depends_on:
+      - erato-api
+
+volumes:
+  caddydata:
+  caddyconfig:

@@ -1,0 +1,12 @@
+{
+  "name": "@erato/design-tokens",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "DTCG-Design-Tokens + Resolver → MUI-Theme / CSS-Variablen (White-Label-Fundament)",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./tokens/*": "./tokens/*"
+  },
+  "files": ["src", "tokens"]
+}

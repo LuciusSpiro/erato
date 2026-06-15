@@ -1,0 +1,106 @@
+# Erato — P0 Plattform-Infrastruktur (Dev).
+# Bringt die geteilten Plattform-Dienste hoch. erato-api und erato-web laufen im Dev
+# zunächst per npm gegen diese Container (Dockerfiles für api/web folgen beim Packaging).
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: erato-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-erato}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-erato}
+      POSTGRES_DB: ${POSTGRES_DB:-erato}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-erato} -d ${POSTGRES_DB:-erato}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: erato-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"   # S3-API
+      - "9001:9001"   # Web-Konsole
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: erato-keycloak
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER:-erato}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-erato}
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8085:8080"   # Host-Port 8080 ist belegt → Keycloak auf 8085
+    volumes:
+      - ./docker/keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: erato-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollamadata:/root/.ollama
+
+  erato-api:
+    build: ./api
+    container_name: erato-api
+    environment:
+      PORT: 3001
+      WEB_ORIGIN: http://localhost:5173
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-erato}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-erato}
+      PGDATABASE: ${POSTGRES_DB:-erato}
+      MINIO_HOST: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_PUBLIC_URL: http://localhost:9000   # browser-seitige URL für Logos
+      OIDC_ISSUER: http://localhost:8085/realms/erato            # iss-Claim im Token
+      OIDC_JWKS_URL: http://keycloak:8080/realms/erato/protocol/openid-connect/certs  # intern
+      OLLAMA_URL: http://ollama:11434           # Embeddings (intern); Host-Test: localhost:11434
+      EMBED_MODEL: nomic-embed-text
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      keycloak:
+        condition: service_started
+      ollama:
+        condition: service_started
+
+volumes:
+  pgdata:
+  miniodata:
+  ollamadata:

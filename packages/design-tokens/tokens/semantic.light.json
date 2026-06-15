@@ -1,0 +1,13 @@
+{
+  "semantic": {
+    "primary":       { "$type": "color", "$value": "{color.indigo.500}" },
+    "bg":            { "$type": "color", "$value": "{color.white}" },
+    "surface":       { "$type": "color", "$value": "{color.gray.50}" },
+    "border":        { "$type": "color", "$value": "{color.gray.200}" },
+    "text":          { "$type": "color", "$value": "{color.gray.900}" },
+    "textSecondary": { "$type": "color", "$value": "{color.gray.500}" },
+    "success":       { "$type": "color", "$value": "{color.green.light}" },
+    "warning":       { "$type": "color", "$value": "{color.yellow.light}" },
+    "error":         { "$type": "color", "$value": "{color.red.light}" }
+  }
+}

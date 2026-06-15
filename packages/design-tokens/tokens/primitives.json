@@ -1,0 +1,41 @@
+{
+  "color": {
+    "indigo": {
+      "500": { "$type": "color", "$value": "#3B5BDB" },
+      "300": { "$type": "color", "$value": "#748FFC" }
+    },
+    "white": { "$type": "color", "$value": "#FFFFFF" },
+    "gray": {
+      "50":  { "$type": "color", "$value": "#F8F9FA" },
+      "200": { "$type": "color", "$value": "#E9ECEF" },
+      "500": { "$type": "color", "$value": "#6B7280" },
+      "900": { "$type": "color", "$value": "#1A1D21" }
+    },
+    "ink": {
+      "900": { "$type": "color", "$value": "#1A1B1E" },
+      "850": { "$type": "color", "$value": "#202124" },
+      "700": { "$type": "color", "$value": "#2C2E33" },
+      "400": { "$type": "color", "$value": "#9AA0A6" },
+      "200": { "$type": "color", "$value": "#E8EAED" }
+    },
+    "green":  { "light": { "$type": "color", "$value": "#2F9E44" }, "dark": { "$type": "color", "$value": "#51CF66" } },
+    "yellow": { "light": { "$type": "color", "$value": "#E8A317" }, "dark": { "$type": "color", "$value": "#FCC419" } },
+    "red":    { "light": { "$type": "color", "$value": "#E03131" }, "dark": { "$type": "color", "$value": "#FF6B6B" } }
+  },
+  "font": {
+    "family": {
+      "sans": { "$type": "fontFamily", "$value": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif" }
+    },
+    "size": {
+      "100": { "$type": "dimension", "$value": "0.8125rem" },
+      "200": { "$type": "dimension", "$value": "0.875rem" },
+      "300": { "$type": "dimension", "$value": "1rem" },
+      "400": { "$type": "dimension", "$value": "1.1875rem" },
+      "500": { "$type": "dimension", "$value": "1.5rem" },
+      "600": { "$type": "dimension", "$value": "1.875rem" }
+    }
+  },
+  "radius": {
+    "md": { "$type": "dimension", "$value": "8px" }
+  }
+}

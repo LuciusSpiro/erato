@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Builds / Artefakte
+dist/
+**/dist/
+storybook-static/
+**/storybook-static/
+*.tsbuildinfo
+
+# Secrets / lokale Umgebung
+.env
+.env.local
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test-/Coverage-Artefakte
+coverage/
+playwright-report/
+test-results/

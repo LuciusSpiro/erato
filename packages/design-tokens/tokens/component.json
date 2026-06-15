@@ -1,0 +1,13 @@
+{
+  "component": {
+    "sidebar": {
+      "bg": { "$type": "color", "$value": "{semantic.surface}" }
+    },
+    "button": {
+      "radius": { "$type": "dimension", "$value": "{radius.md}" }
+    },
+    "callout": {
+      "border": { "$type": "color", "$value": "{semantic.border}" }
+    }
+  }
+}

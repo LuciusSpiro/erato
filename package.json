@@ -1,0 +1,10 @@
+{
+  "name": "erato",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Erato — self-hosted Wissens-/Notiz-System mit AI-Anbindung (Monorepo)",
+  "workspaces": [
+    "web",
+    "packages/*"
+  ]
+}

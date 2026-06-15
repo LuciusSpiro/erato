@@ -1,0 +1,9 @@
+{
+  "highlight": {
+    "yellow": { "light": { "$type": "color", "$value": "#FFF3BF" }, "dark": { "$type": "color", "$value": "#5C5524" } },
+    "green":  { "light": { "$type": "color", "$value": "#D3F9D8" }, "dark": { "$type": "color", "$value": "#2B4D33" } },
+    "blue":   { "light": { "$type": "color", "$value": "#D0EBFF" }, "dark": { "$type": "color", "$value": "#26415C" } },
+    "pink":   { "light": { "$type": "color", "$value": "#FFDEEB" }, "dark": { "$type": "color", "$value": "#5C2E40" } },
+    "purple": { "light": { "$type": "color", "$value": "#E5DBFF" }, "dark": { "$type": "color", "$value": "#3E2E5C" } }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "erato-mcp",
+  "version": "0.1.0",
+  "description": "MCP-Server fuer Erato-Doku: liest und schreibt Erato-Seiten ueber die Erato-API.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "erato-mcp": "src/server.js"
+  },
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  }
+}

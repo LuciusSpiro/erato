@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install (workspaces)
+        run: npm ci
+      - name: Lint Design-System (Token-Contract)
+        run: npm run lint --workspace @erato/ui
+      - name: Build Web
+        run: npm run build --workspace web
+      - name: Build Storybook
+        run: npm run build-storybook --workspace @erato/ui
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build erato-api image
+        run: docker build -t erato-api ./api
+      - name: Build erato-web image
+        run: docker build -t erato-web -f web/Dockerfile .
+      - name: Build erato-mcp image
+        run: docker build -t erato-mcp ./mcp

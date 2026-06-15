@@ -1,0 +1,11 @@
+# Build-Context-Ausschlüsse (gilt u.a. für den erato-web-Build mit Repo-Root-Context).
+**/node_modules
+**/dist
+**/storybook-static
+**/*.log
+.git
+.env
+.env.local
+coverage
+playwright-report
+test-results

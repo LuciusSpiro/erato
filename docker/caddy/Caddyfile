@@ -1,0 +1,9 @@
+# Caddy Reverse-Proxy für Erato (Single-Origin Front).
+# Dev/Default: HTTP auf :8088. Für Produktion mit Domain:
+#   - Ersetze ":8088" durch "deine-domain.de" → Caddy holt automatisch Let's-Encrypt-TLS.
+#   - Im Compose dann "80:80" und "443:443" mappen.
+:8088 {
+	encode gzip
+	# Alles an erato-web (nginx): liefert die SPA und proxyt /v1 → erato-api.
+	reverse_proxy erato-web:80
+}

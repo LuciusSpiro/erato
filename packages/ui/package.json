@@ -1,0 +1,43 @@
+{
+  "name": "@erato/ui",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Erato Komponentenbibliothek (MUI, ausschließlich token-gestylt) + Storybook",
+  "main": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "files": ["src"],
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "lint": "eslint src",
+    "test-storybook": "test-storybook"
+  },
+  "dependencies": {
+    "@erato/design-tokens": "*"
+  },
+  "peerDependencies": {
+    "@emotion/react": "^11",
+    "@emotion/styled": "^11",
+    "@mui/material": "^7",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@eslint/js": "^9.0.0",
+    "@mui/material": "^7.3.2",
+    "@storybook/addon-a11y": "^10.4.4",
+    "@storybook/addon-themes": "^10.4.4",
+    "@storybook/react-vite": "^10.4.4",
+    "@storybook/test-runner": "^0.24.4",
+    "@vitejs/plugin-react": "^5.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react": "^7.37.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "storybook": "^10.4.4",
+    "vite": "^7.0.0"
+  }
+}
