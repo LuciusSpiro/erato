@@ -29,12 +29,12 @@
   ],
   "users": [
     {
-      "username": "christian",
+      "username": "kai",
       "enabled": true,
       "emailVerified": true,
-      "email": "c.petry@teckpro.de",
-      "firstName": "Christian",
-      "lastName": "Petry",
+      "email": "k.klein@teckpro.de",
+      "firstName": "Kai",
+      "lastName": "Klein",
       "credentials": [{ "type": "password", "value": "erato", "temporary": false }],
       "realmRoles": ["admin", "member"]
     },

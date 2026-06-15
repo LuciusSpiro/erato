@@ -71,7 +71,7 @@ export default function MobileView({ notebooks = [], page, activeId, onSelect, l
             <Typography variant="caption" noWrap>{page?.title ?? 'Notizen'}</Typography>
           </Box>
           <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: 'primary.main' }}>
-            {(page?.updatedBy ?? 'CP').slice(0, 2).toUpperCase()}
+            {(page?.updatedBy ?? 'KK').slice(0, 2).toUpperCase()}
           </Avatar>
         </Box>
 

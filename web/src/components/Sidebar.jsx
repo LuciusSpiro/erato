@@ -311,7 +311,7 @@ export default function Sidebar({
             <IconButton onClick={onOpenSettings} sx={{ width: 36, height: 36, color: 'text.secondary' }}><Settings size={20} /></IconButton>
           </Tooltip>
         )}
-        <Box sx={{ width: 30, height: 30, borderRadius: '50%', bgcolor: 'primary.main', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, mt: 0.5 }}>CP</Box>
+        <Box sx={{ width: 30, height: 30, borderRadius: '50%', bgcolor: 'primary.main', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, mt: 0.5 }}>KK</Box>
       </Box>
 
       {/* Baum-Sidebar */}

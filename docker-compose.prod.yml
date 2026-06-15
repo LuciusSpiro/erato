@@ -45,7 +45,7 @@ services:
     environment:
       ERATO_API_URL: http://erato-api:3001
       KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/erato/protocol/openid-connect/token
-      ERATO_USER: ${MCP_USER:-christian}
+      ERATO_USER: ${MCP_USER:-kai}
       ERATO_PASS: ${MCP_PASS:-erato}
     stdin_open: true
     tty: true

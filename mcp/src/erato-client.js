@@ -6,7 +6,7 @@
 // Konfiguration via Env-Vars (mit Dev-Defaults):
 //   ERATO_API_URL       (default: http://localhost:3001)
 //   KEYCLOAK_TOKEN_URL  (default: http://localhost:8085/realms/erato/protocol/openid-connect/token)
-//   ERATO_USER          (default: christian)
+//   ERATO_USER          (default: kai)
 //   ERATO_PASS          (default: erato)
 //   ERATO_CLIENT_ID     (default: erato-web)
 
@@ -14,7 +14,7 @@ const API_URL = (process.env.ERATO_API_URL || "http://localhost:3001").replace(/
 const TOKEN_URL =
   process.env.KEYCLOAK_TOKEN_URL ||
   "http://localhost:8085/realms/erato/protocol/openid-connect/token";
-const USER = process.env.ERATO_USER || "christian";
+const USER = process.env.ERATO_USER || "kai";
 const PASS = process.env.ERATO_PASS || "erato";
 const CLIENT_ID = process.env.ERATO_CLIENT_ID || "erato-web";
 

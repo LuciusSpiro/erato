@@ -101,7 +101,7 @@ export default function Editor({ page, breadcrumb, loading, onSave, onLocalChang
     )
   }
 
-  const initials = (page.updatedBy ?? 'CP').slice(0, 2).toUpperCase()
+  const initials = (page.updatedBy ?? 'KK').slice(0, 2).toUpperCase()
 
   return (
     <Box sx={{ flex: 1, overflowY: 'auto', position: 'relative' }}>

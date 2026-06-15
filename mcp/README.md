@@ -25,7 +25,7 @@ Alle optional, mit Dev-Defaults:
 |----------|---------|
 | `ERATO_API_URL` | `http://localhost:3001` |
 | `KEYCLOAK_TOKEN_URL` | `http://localhost:8085/realms/erato/protocol/openid-connect/token` |
-| `ERATO_USER` | `christian` |
+| `ERATO_USER` | `kai` |
 | `ERATO_PASS` | `erato` |
 | `ERATO_CLIENT_ID` | `erato-web` |
 
@@ -55,7 +55,7 @@ stdio-Transport, Kommando `node src/server.js`. Beispiel-Konfiguration:
       "args": ["C:\\Users\\k.klein\\privat\\erato\\mcp\\src\\server.js"],
       "env": {
         "ERATO_API_URL": "http://localhost:3001",
-        "ERATO_USER": "christian",
+        "ERATO_USER": "kai",
         "ERATO_PASS": "erato"
       }
     }

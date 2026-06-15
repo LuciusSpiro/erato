@@ -57,7 +57,7 @@ export const activePage = {
   notebook: 'Engineering',
   breadcrumb: ['Engineering', 'Architektur', 'Backend', 'API-Konventionen'],
   title: 'API-Konventionen',
-  editedBy: 'Christian P.',
+  editedBy: 'Kai K.',
   editedAt: 'vor 3 Stunden',
 }
 

@@ -46,7 +46,7 @@ Optional Storybook: `npm run storybook --workspace @erato/ui` → http://localho
 | MinIO-Konsole | http://localhost:9001 |
 | Storybook | http://localhost:6006 |
 
-Test-Nutzer: `christian` / `erato` (Admin) · `member` / `member`.
+Test-Nutzer: `kai` / `erato` (Admin) · `member` / `member`.
 
 ## Produktion
 
