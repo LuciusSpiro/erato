@@ -16,6 +16,7 @@ import { useApi, getCapabilities } from './api'
 import { findPath, patchTitle, flattenPages } from './lib/tree'
 import { saveBlob } from './lib/download'
 import ImportDialog from './components/ImportDialog'
+import Welcome from './components/Welcome'
 import Sidebar from './components/Sidebar'
 import Editor from './components/Editor'
 import SearchOverlay from './components/SearchOverlay'
@@ -59,6 +60,9 @@ export default function App() {
   const roles = rolesFromUser(auth.user)
   // Im local mode ist der einzige (lokale) Nutzer Admin → Branding/Theme editierbar.
   const isAdmin = LOCAL_MODE || roles.includes('admin')
+  // Ausgeloggt (nur Web-Modus): statt der App die öffentliche Willkommens-/Produktseite zeigen.
+  const loggedOut = !LOCAL_MODE && !auth.isAuthenticated
+  const appName = branding.tokens?.appName ?? 'Erato'
 
   const [notebooks, setNotebooks] = useState([]) // [{ id, title, icon, pages: tree }]
   const [favorites, setFavorites] = useState([]) // [{ pageId, title, notebookTitle }]
@@ -318,7 +322,7 @@ export default function App() {
             <Box sx={{ fontWeight: 700, color: 'primary.main' }}>{branding.tokens?.appName ?? 'Erato'}</Box>
           )}
           <Box sx={{ flex: 1 }} />
-          {!isMobile && (
+          {!isMobile && !loggedOut && (
             <Button size="small" variant="outlined" startIcon={<SearchIcon size={15} />} onClick={() => setSearchOpen(true)} sx={{ color: 'text.secondary', borderColor: 'divider' }}>
               Suche
             </Button>
@@ -351,31 +355,38 @@ export default function App() {
           </Tooltip>
         </Box>
 
-        {/* Inhalt (responsiv: Sidebar inline auf Desktop, als Drawer auf Mobile) */}
+        {/* Inhalt (responsiv: Sidebar inline auf Desktop, als Drawer auf Mobile).
+            Ausgeloggt: nur die öffentliche Willkommensseite. */}
         <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-          {isMobile ? (
-            <Drawer open={navOpen} onClose={() => setNavOpen(false)} slotProps={{ paper: { sx: { border: 0 } } }}>
-              {sidebarNode}
-            </Drawer>
+          {loggedOut ? (
+            <Welcome appName={appName} onLogin={() => auth.signinRedirect()} />
           ) : (
-            sidebarNode
+            <>
+              {isMobile ? (
+                <Drawer open={navOpen} onClose={() => setNavOpen(false)} slotProps={{ paper: { sx: { border: 0 } } }}>
+                  {sidebarNode}
+                </Drawer>
+              ) : (
+                sidebarNode
+              )}
+              <Editor
+                page={page}
+                breadcrumb={breadcrumb}
+                loading={pageLoading}
+                onSave={savePage}
+                onLocalChange={onLocalChange}
+                onOpenHistory={() => setHistoryOpen(true)}
+                pages={allPages}
+                onOpenPage={selectPage}
+                jump={jump}
+                indentSize={indentSize}
+              />
+            </>
           )}
-          <Editor
-            page={page}
-            breadcrumb={breadcrumb}
-            loading={pageLoading}
-            onSave={savePage}
-            onLocalChange={onLocalChange}
-            onOpenHistory={() => setHistoryOpen(true)}
-            pages={allPages}
-            onOpenPage={selectPage}
-            jump={jump}
-            indentSize={indentSize}
-          />
         </Box>
 
         {/* Untere Tab-Leiste (nur Mobile) */}
-        {isMobile && (
+        {isMobile && !loggedOut && (
           <BottomNavigation
             showLabels
             sx={{ flexShrink: 0, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}
