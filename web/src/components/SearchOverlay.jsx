@@ -65,8 +65,13 @@ export default function SearchOverlay({ open, onClose, onOpenPage }) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [query, api])
 
+  // Getroffenen Begriff aus dem Snippet (<<…>>) ziehen, sonst die Suchanfrage.
+  const termFromSnippet = (snip) => {
+    const m = /<<([^>]+)>>/.exec(snip || '')
+    return (m ? m[1] : '').trim() || query.trim()
+  }
   const openResult = (r) => {
-    if (r) { onOpenPage?.(r.pageId); onClose?.() }
+    if (r) { onOpenPage?.(r.pageId, termFromSnippet(r.snippet)); onClose?.() }
   }
 
   const onKeyDown = (e) => {

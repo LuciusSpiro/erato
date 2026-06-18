@@ -9,6 +9,15 @@ storybook-static/
 **/storybook-static/
 *.tsbuildinfo
 
+# Electron-Desktop (Build-Output)
+desktop/dist-web/
+desktop/release/
+
+# Lokale Daten (local mode: eingebettetes PGlite + lokaler Logo-Storage)
+.erato-data/
+**/.erato-data/
+erato-local.json
+
 # Secrets / lokale Umgebung
 .env
 .env.local

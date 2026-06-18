@@ -6,5 +6,13 @@
   "workspaces": [
     "web",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "test:unit": "vitest run web/src packages/design-tokens api/test/exportmd api/test/capabilities api/test/local-pglite api/test/mcp-upsert",
+    "test:api": "vitest run api/test/api api/test/exportimport",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
 }

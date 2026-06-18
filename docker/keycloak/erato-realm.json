@@ -47,6 +47,16 @@
       "lastName": "User",
       "credentials": [{ "type": "password", "value": "member", "temporary": false }],
       "realmRoles": ["member"]
+    },
+    {
+      "username": "docs-bot",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "docs-bot@erato.local",
+      "firstName": "Docs",
+      "lastName": "Bot",
+      "credentials": [{ "type": "password", "value": "docs-bot", "temporary": false }],
+      "realmRoles": ["member"]
     }
   ]
 }

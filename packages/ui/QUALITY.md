@@ -1,8 +1,8 @@
 # Qualitäts-Garantien — `@erato/ui`
 
 Diese drei Werkzeuge sichern zu, dass Komponenten **immer korrekt (token-konform)
-gestylt** und **zugänglich** sind. Sie setzen die „Qualitäts-Garantien" aus
-`DESIGN-SYSTEM.md` um.
+gestylt** und **zugänglich** sind. Sie setzen die „Qualitäts-Garantien" des
+Design-Systems um.
 
 Alle Befehle laufen im Workspace `@erato/ui` (vom Repo-Root mit
 `--workspace @erato/ui` oder direkt in `packages/ui/`).

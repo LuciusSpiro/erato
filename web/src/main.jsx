@@ -4,20 +4,28 @@ import { AuthProvider } from 'react-oidc-context'
 import { WebStorageStateStore } from 'oidc-client-ts'
 import App from './App.jsx'
 import { oidcConfig } from './auth'
+import { LOCAL_MODE } from './authShim'
 
 // onSigninCallback entfernt die OIDC-Query-Parameter aus der URL nach dem Login.
 const onSigninCallback = () => {
   window.history.replaceState({}, document.title, window.location.pathname)
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const root = ReactDOM.createRoot(document.getElementById('root'))
+
+// Im local mode (Electron) gibt es kein Keycloak → AuthProvider weglassen.
+root.render(
   <React.StrictMode>
-    <AuthProvider
-      {...oidcConfig}
-      userStore={new WebStorageStateStore({ store: window.localStorage })}
-      onSigninCallback={onSigninCallback}
-    >
+    {LOCAL_MODE ? (
       <App />
-    </AuthProvider>
+    ) : (
+      <AuthProvider
+        {...oidcConfig}
+        userStore={new WebStorageStateStore({ store: window.localStorage })}
+        onSigninCallback={onSigninCallback}
+      >
+        <App />
+      </AuthProvider>
+    )}
   </React.StrictMode>,
 )

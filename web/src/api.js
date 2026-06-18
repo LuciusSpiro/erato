@@ -5,9 +5,14 @@
 // kapselt useAuth() und liefert alle Funktionen mit gebundenem Token.
 
 import { useMemo } from 'react'
-import { useAuth } from 'react-oidc-context'
+import { useAuth } from './authShim'
 
-export const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
+// API-Basis: im local mode injiziert Electron den Port über window.__ERATO__;
+// sonst VITE_API_URL bzw. lokaler Dev-Default.
+export const API_BASE =
+  (typeof window !== 'undefined' && window.__ERATO__?.apiBase) ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:3001'
 
 // Interner fetch-Wrapper: setzt Bearer-Header (falls Token vorhanden),
 // JSON-Content-Type bei Body, und wirft bei Nicht-OK-Antworten.
@@ -34,12 +39,25 @@ async function request(path, { token, method = 'GET', body, headers, raw } = {})
   return text ? JSON.parse(text) : null
 }
 
+// ---- Capabilities (öffentlich; steuert u.a. Sichtbarkeit der AI-Features) ----
+export const getCapabilities = () => request('/v1/capabilities', {})
+
+// ---- AI-Einstellungen (Admin): Ollama-URL + Modelle ----
+export const getAiSettings = (token) => request('/v1/settings/ai', { token })
+export const putAiSettings = (token, body) =>
+  request('/v1/settings/ai', { token, method: 'PUT', body })
+export const getAiModels = (token, url) =>
+  request(`/v1/ai/models${url ? `?url=${encodeURIComponent(url)}` : ''}`, { token })
+
 // ---- Notizbücher ----
 export const getNotebooks = (token) =>
   request('/v1/notebooks', { token })
 
 export const createNotebook = (token, { title, icon } = {}) =>
   request('/v1/notebooks', { token, method: 'POST', body: { title, icon } })
+
+export const deleteNotebook = (token, id) =>
+  request(`/v1/notebooks/${id}`, { token, method: 'DELETE' })
 
 // ---- Seitenbaum eines Notizbuchs ----
 export const getPageTree = (token, notebookId) =>
@@ -92,6 +110,40 @@ export const getVersion = (token, pageId, versionId) =>
 export const restoreVersion = (token, pageId, versionId) =>
   request(`/v1/pages/${pageId}/versions/${versionId}/restore`, { token, method: 'POST' })
 
+// Interner Helfer: GET als Blob (für Datei-Downloads) + Dateiname aus Content-Disposition.
+async function requestBlob(path, token) {
+  const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  if (!res.ok) throw new Error(`HTTP ${res.status} bei ${path}`)
+  const blob = await res.blob()
+  const cd = res.headers.get('content-disposition') || ''
+  const m = /filename="?([^"]+)"?/.exec(cd)
+  return { blob, filename: m ? m[1] : null }
+}
+
+// ---- Export (liefern { blob, filename }) ----
+export const exportPage = (token, pageId, withSubpages) =>
+  requestBlob(`/v1/pages/${pageId}/export${withSubpages ? '?subpages=1' : ''}`, token)
+export const exportNotebook = (token, nbId) => requestBlob(`/v1/notebooks/${nbId}/export`, token)
+export const exportAll = (token) => requestBlob('/v1/export', token)
+export const exportNotebookErato = (token, nbId) => requestBlob(`/v1/notebooks/${nbId}/export/erato`, token)
+export const exportAllErato = (token) => requestBlob('/v1/export/erato', token)
+
+// ---- Import ----
+export const importFile = (token, notebookId, parentId, file) => {
+  const fd = new FormData(); fd.append('file', file)
+  const qs = new URLSearchParams({ notebookId }); if (parentId) qs.set('parentId', parentId)
+  return request(`/v1/import?${qs.toString()}`, { token, method: 'POST', body: fd })
+}
+export const importErato = (token, file) => {
+  const fd = new FormData(); fd.append('file', file)
+  return request('/v1/import/erato', { token, method: 'POST', body: fd })
+}
+
+// ---- Favoriten ----
+export const getFavorites = (token) => request('/v1/favorites', { token })
+export const addFavorite = (token, pageId) => request('/v1/favorites', { token, method: 'POST', body: { pageId } })
+export const removeFavorite = (token, pageId) => request(`/v1/favorites/${pageId}`, { token, method: 'DELETE' })
+
 // ---- Suche ----
 export const search = (token, q) =>
   request(`/v1/search?q=${encodeURIComponent(q)}`, { token })
@@ -132,6 +184,7 @@ export function useApi() {
     isAuthenticated: !!token,
     getNotebooks: () => getNotebooks(token),
     createNotebook: (data) => createNotebook(token, data),
+    deleteNotebook: (id) => deleteNotebook(token, id),
     getPageTree: (notebookId) => getPageTree(token, notebookId),
     getPage: (pageId) => getPage(token, pageId),
     createPage: (data) => createPage(token, data),
@@ -145,7 +198,20 @@ export function useApi() {
     getVersion: (pageId, versionId) => getVersion(token, pageId, versionId),
     restoreVersion: (pageId, versionId) => restoreVersion(token, pageId, versionId),
     search: (q) => search(token, q),
+    getFavorites: () => getFavorites(token),
+    addFavorite: (pageId) => addFavorite(token, pageId),
+    removeFavorite: (pageId) => removeFavorite(token, pageId),
+    exportPage: (pageId, withSubpages) => exportPage(token, pageId, withSubpages),
+    exportNotebook: (nbId) => exportNotebook(token, nbId),
+    exportAll: () => exportAll(token),
+    exportNotebookErato: (nbId) => exportNotebookErato(token, nbId),
+    exportAllErato: () => exportAllErato(token),
+    importFile: (notebookId, parentId, file) => importFile(token, notebookId, parentId, file),
+    importErato: (file) => importErato(token, file),
     aiChat: (question, notebookId) => aiChat(token, question, notebookId),
+    getAiSettings: () => getAiSettings(token),
+    putAiSettings: (body) => putAiSettings(token, body),
+    getAiModels: (url) => getAiModels(token, url),
     getBranding: (app) => getBranding(app),
     putBranding: (tokens, app) => putBranding(token, tokens, app),
     uploadBrandingLogo: (file, mode, app) => uploadBrandingLogo(token, file, mode, app),

@@ -81,6 +81,16 @@ export async function notebookRoutes(app) {
     return { id: r.id, title: r.title, icon: r.icon }
   })
 
+  // Notizbuch löschen. Erfordert owner (oder globaler Admin).
+  // FK ON DELETE CASCADE räumt pages, page_versions, page_embeddings,
+  // notebook_members und favorites automatisch mit auf.
+  app.delete('/v1/notebooks/:id', { preHandler: requireAuth }, async (req, reply) => {
+    if (await requireNotebookRole(req.params.id, req, reply, 'owner')) return
+    const { rowCount } = await query('DELETE FROM notebooks WHERE id = $1', [req.params.id])
+    if (rowCount === 0) return reply.code(404).send({ error: 'not found' })
+    return { ok: true }
+  })
+
   // Seitenbaum eines Notizbuchs. Erfordert mind. viewer (oder globaler Admin).
   app.get('/v1/notebooks/:id/pages', { preHandler: requireAuth }, async (req, reply) => {
     if (await requireNotebookRole(req.params.id, req, reply, 'viewer')) return

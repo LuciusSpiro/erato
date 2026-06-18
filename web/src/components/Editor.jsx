@@ -3,6 +3,7 @@ import { Box, Typography, InputBase, Avatar, CircularProgress, useTheme, Tooltip
 import { ChevronRight, Check, Loader2, AlertTriangle, Code2, FileText, History } from 'lucide-react'
 import { Breadcrumb, EmptyState } from '@erato/ui'
 import TipTapView from './editor/TipTapView'
+import { evaluateContentChange } from '../lib/editorSave'
 
 function SaveIndicator({ status }) {
   if (status === 'saving') {
@@ -33,7 +34,7 @@ const AUTOSAVE_MS = 1000
 
 // page: { id, notebookId, parentId, title, contentMd, updatedAt, updatedBy } | null
 // onSave(pageId, { title?, contentMd? }) -> Promise<{ ok, updatedAt }>
-export default function Editor({ page, breadcrumb, loading, onSave, onLocalChange, onOpenHistory }) {
+export default function Editor({ page, breadcrumb, loading, onSave, onLocalChange, onOpenHistory, pages = [], onOpenPage, jump, indentSize = 2 }) {
   const theme = useTheme()
   const mode = theme.palette.mode // light | dark — steuert Highlight-Töne
   const [title, setTitle] = useState('')
@@ -77,9 +78,12 @@ export default function Editor({ page, breadcrumb, loading, onSave, onLocalChang
     scheduleSave({ title: v, contentMd: content })
   }
   const handleContent = useCallback((md) => {
+    // Datenverlust-Schutz steckt in evaluateContentChange (rein + getestet).
+    const { apply, save } = evaluateContentChange(page?.contentMd, md)
+    if (!apply) return
     setContent(md)
-    scheduleSave({ title, contentMd: md })
-  }, [title, scheduleSave])
+    if (save) scheduleSave({ title, contentMd: md })
+  }, [page, title, scheduleSave])
 
   if (loading) {
     return (
@@ -181,6 +185,10 @@ export default function Editor({ page, breadcrumb, loading, onSave, onLocalChang
             value={content}
             onChange={handleContent}
             mode={mode}
+            pages={pages}
+            onOpenPage={onOpenPage}
+            jump={jump}
+            indentSize={indentSize}
           />
         )}
         <Box sx={{ height: 120 }} />

@@ -1,21 +1,19 @@
 import { query, pool } from './db.js'
-import { config } from './config.js'
+import { getAiConfig } from './aiConfig.js'
 
 // Maximale Chunk-Größe in Zeichen (grobe Heuristik, kein Token-Zähler).
 const MAX_CHUNK_CHARS = 1000
 
-// Ruft Ollama-Embeddings für einen Text ab. Nutzt global fetch (Node 22),
-// keine zusätzliche Dependency. Robust gegen Timeout/Fehler: wirft eine
-// aussagekräftige Exception, die der Aufrufer fangen/loggen kann.
-export async function embed(text) {
-  const url = `${config.ollama.url}/api/embeddings`
+// Ruft Ollama-Embeddings ab — mit explizit übergebenem Endpoint/Modell.
+// Robust gegen Timeout/Fehler: wirft eine aussagekräftige Exception.
+export async function embedWith(url, model, text, timeoutMs = 30000) {
   const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), config.ollama.timeoutMs)
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
   try {
-    const res = await fetch(url, {
+    const res = await fetch(`${url}/api/embeddings`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ model: config.ollama.embedModel, prompt: text }),
+      body: JSON.stringify({ model, prompt: text }),
       signal: ctrl.signal,
     })
     if (!res.ok) {
@@ -31,6 +29,12 @@ export async function embed(text) {
   } finally {
     clearTimeout(timer)
   }
+}
+
+// Embedding mit der aktuell konfigurierten Ollama-Config (DB über Env).
+export async function embed(text) {
+  const ai = await getAiConfig()
+  return embedWith(ai.url, ai.embedModel, text, ai.timeoutMs)
 }
 
 // Wandelt einen Vektor in das pgvector-Textformat '[1,2,3]'.
@@ -167,4 +171,48 @@ export function reindexPageAsync(pageId, logger) {
     if (logger?.warn) logger.warn({ err: msg, pageId }, 'reindexPage fehlgeschlagen')
     else console.warn('reindexPage fehlgeschlagen', pageId, msg)
   })
+}
+
+// Re-indexiert alle Seiten im Hintergrund (nach Modell-/Dimensionswechsel).
+// Sequenziell, damit Ollama nicht überlastet wird; Fehler werden nur geloggt.
+export function reindexAllAsync(logger) {
+  ;(async () => {
+    const { rows } = await query('SELECT id FROM pages ORDER BY created_at')
+    let ok = 0
+    for (const r of rows) {
+      try {
+        await reindexPage(r.id)
+        ok++
+      } catch (err) {
+        logger?.warn?.({ err: err.message, pageId: r.id }, 'reindexAll: Seite fehlgeschlagen')
+      }
+    }
+    logger?.info?.({ pages: rows.length, indexed: ok }, 'reindexAll abgeschlossen')
+  })().catch((err) => logger?.warn?.({ err: err.message }, 'reindexAll fehlgeschlagen'))
+}
+
+// Stellt die Dimension der Embedding-Spalte auf `dim` um (bei Wechsel des
+// Embed-Modells mit abweichender Vektorgröße). Leert die alten Embeddings
+// (gehören zum alten Modell) und baut den ANN-Index neu. Danach ist ein
+// vollständiger Re-Index nötig (reindexAllAsync).
+export async function reconfigureEmbeddingDimension(dim) {
+  const n = Number(dim)
+  if (!Number.isInteger(n) || n <= 0 || n > 65535) {
+    throw new Error(`ungültige Embedding-Dimension: ${dim}`)
+  }
+  try {
+    await query('DROP INDEX IF EXISTS page_embeddings_embedding_hnsw_idx')
+  } catch (err) {
+    console.warn('HNSW-Index Drop übersprungen:', err.message)
+  }
+  await query('TRUNCATE page_embeddings')
+  await query(`ALTER TABLE page_embeddings ALTER COLUMN embedding TYPE vector(${n})`)
+  try {
+    await query(
+      `CREATE INDEX IF NOT EXISTS page_embeddings_embedding_hnsw_idx
+         ON page_embeddings USING hnsw (embedding vector_cosine_ops)`,
+    )
+  } catch (err) {
+    console.warn('HNSW-Index nach Reconfigure nicht verfügbar:', err.message)
+  }
 }

@@ -1,14 +1,94 @@
-import pg from 'pg'
 import { config } from './config.js'
 
-export const pool = new pg.Pool(config.db)
+// ---------------------------------------------------------------------------
+// DB-Adapter: 'pg' (PostgreSQL-Server) ODER 'pglite' (eingebettetes Postgres
+// als WASM, in-process — für die lokale Electron-App). Beide Backends bieten
+// dieselbe Schnittstelle: query(text, params), exec(sql) für Mehrfach-Statements
+// und pool.connect() für Transaktionen (embeddings.js).
+// ---------------------------------------------------------------------------
 
-export const query = (text, params) => pool.query(text, params)
+// PGlite liefert { rows, affectedRows }, pg liefert { rows, rowCount }.
+// Vereinheitlichen, damit Aufrufer immer rowCount nutzen können.
+function normalize(result) {
+  if (result && result.rowCount === undefined) {
+    result.rowCount =
+      result.affectedRows != null && result.affectedRows > 0
+        ? result.affectedRows
+        : result.rows?.length ?? 0
+  }
+  return result
+}
+
+async function createPgBackend() {
+  const pg = (await import('pg')).default
+  const pool = new pg.Pool(config.db)
+  return {
+    query: (text, params) => pool.query(text, params),
+    exec: (sql) => pool.query(sql),
+    connect: () => pool.connect(),
+  }
+}
+
+async function createPgliteBackend() {
+  const { PGlite } = await import('@electric-sql/pglite')
+  const { vector } = await import('@electric-sql/pglite/vector')
+  const { join } = await import('node:path')
+  const { mkdirSync } = await import('node:fs')
+  const dir = join(config.localDataDir, 'pgdata')
+  // PGlite legt nur das Leaf-Verzeichnis an (nicht rekursiv) → Eltern sicherstellen.
+  mkdirSync(dir, { recursive: true })
+  const db = new PGlite(dir, { extensions: { vector } })
+  await db.waitReady
+
+  // PGlite hat genau eine Verbindung und serialisiert Queries selbst. Für
+  // isolierte Transaktionen (BEGIN/COMMIT in embeddings.js) müssen wir die
+  // "Checkouts" über pool.connect() serialisieren, damit sich keine fremden
+  // Queries zwischen BEGIN und COMMIT schieben.
+  let lock = Promise.resolve()
+  const connect = () => {
+    let release
+    const gate = new Promise((r) => { release = r })
+    const prev = lock
+    lock = gate
+    return prev.then(() => ({
+      query: (text, params) =>
+        (params === undefined ? db.query(text) : db.query(text, params)).then(normalize),
+      release: () => release(),
+    }))
+  }
+
+  return {
+    query: (text, params) =>
+      (params === undefined ? db.query(text) : db.query(text, params)).then(normalize),
+    exec: (sql) => db.exec(sql),
+    connect,
+  }
+}
+
+let backendPromise = null
+function getBackend() {
+  if (!backendPromise) {
+    backendPromise = config.dbMode === 'pglite' ? createPgliteBackend() : createPgBackend()
+  }
+  return backendPromise
+}
+
+export const query = async (text, params) => (await getBackend()).query(text, params)
+
+// Mehrfach-Statement-DDL (durch ';' getrennt). pg kann das in einer einfachen
+// Query, PGlite braucht dafür exec().
+export const exec = async (sql) => (await getBackend()).exec(sql)
+
+// Transaktions-Pool (nur connect() wird genutzt). Lazy an das Backend gebunden.
+export const pool = {
+  connect: async () => (await getBackend()).connect(),
+}
 
 // Schema bei Boot sicherstellen (Dev-Migration). Erstellt die Branding-Tabelle
 // und legt eine instanz-weite Default-Zeile an, falls noch keine existiert.
 export async function migrate() {
-  await query(`
+  // Mehrfach-Statement-Block → exec() (PGlite-kompatibel).
+  await exec(`
     CREATE SCHEMA IF NOT EXISTS branding;
     CREATE TABLE IF NOT EXISTS branding.config (
       app_id        TEXT PRIMARY KEY,           -- '_default' = instanz-weit (gilt für alle Apps)
@@ -28,8 +108,14 @@ export async function migrate() {
     [JSON.stringify({ appName: 'Erato', primary: { light: '#3B5BDB', dark: '#748FFC' } })],
   )
 
-  // gen_random_uuid() stammt aus pgcrypto.
-  await query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`)
+  // gen_random_uuid() stammt aus pgcrypto (in PG13+ auch im Core verfügbar).
+  // In PGlite ist pgcrypto evtl. nicht gebündelt — dann tolerant ignorieren,
+  // da gen_random_uuid() dort bereits im Core existiert.
+  try {
+    await query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`)
+  } catch (err) {
+    console.warn('pgcrypto-Extension nicht verfügbar (Core-gen_random_uuid wird genutzt):', err.message)
+  }
 
   // Notizbücher + Seiten (public-Schema). Markdown (content_md) ist kanonisch.
   await query(`
@@ -95,7 +181,8 @@ export async function migrate() {
   `)
 
   // pgvector-Extension + Embeddings-Tabelle für semantische/hybride Suche.
-  // nomic-embed-text liefert 768 Dimensionen.
+  // nomic-embed-text liefert 768 Dimensionen. In PGlite kommt die Extension
+  // über die Adapter-Konfiguration (extensions: { vector }).
   await query(`CREATE EXTENSION IF NOT EXISTS vector;`)
 
   await query(`
@@ -112,10 +199,36 @@ export async function migrate() {
 
   await query(`CREATE INDEX IF NOT EXISTS page_embeddings_page_id_idx ON page_embeddings (page_id);`)
 
-  // HNSW-Index für Cosine-ANN. Idempotent via IF NOT EXISTS.
+  // HNSW-Index für Cosine-ANN. Idempotent via IF NOT EXISTS. In PGlite ist HNSW
+  // evtl. nicht verfügbar — dann tolerant ignorieren (die Cosine-Suche per <=>
+  // funktioniert auch ohne Index, nur ohne ANN-Beschleunigung).
+  try {
+    await query(`
+      CREATE INDEX IF NOT EXISTS page_embeddings_embedding_hnsw_idx
+        ON page_embeddings USING hnsw (embedding vector_cosine_ops);
+    `)
+  } catch (err) {
+    console.warn('HNSW-Index nicht verfügbar (Cosine-Suche läuft ohne ANN-Index):', err.message)
+  }
+
+  // Favoriten pro Nutzer (user_sub = preferred_username/sub, siehe access.userKey).
   await query(`
-    CREATE INDEX IF NOT EXISTS page_embeddings_embedding_hnsw_idx
-      ON page_embeddings USING hnsw (embedding vector_cosine_ops);
+    CREATE TABLE IF NOT EXISTS favorites (
+      user_sub   text,
+      page_id    uuid REFERENCES pages ON DELETE CASCADE,
+      created_at timestamptz DEFAULT now(),
+      PRIMARY KEY (user_sub, page_id)
+    );
+  `)
+
+  // Instanz-weite Einstellungen (key/value), z.B. AI-/Ollama-Konfiguration.
+  await query(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key        text PRIMARY KEY,
+      value      jsonb NOT NULL DEFAULT '{}',
+      updated_at timestamptz DEFAULT now(),
+      updated_by text
+    );
   `)
 
   // Demo-Daten nur seeden, wenn noch gar keine Notizbücher existieren.

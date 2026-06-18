@@ -1,6 +1,6 @@
-import { config } from './config.js'
 import { requireAuth } from './auth.js'
 import { retrieve } from './search.js'
+import { getAiConfig } from './aiConfig.js'
 
 // Anzahl der Kontext-Treffer, die ins Prompt einfließen.
 const TOP_K = 5
@@ -28,15 +28,16 @@ function buildContext(hits) {
 // Ruft Ollama /api/chat auf (global fetch, kein zusätzliches Dep).
 // Wirft bei Nichtverfügbarkeit/Fehler eine aussagekräftige Exception.
 async function chat(messages) {
-  const url = `${config.ollama.url}/api/chat`
+  const ai = await getAiConfig()
+  const url = `${ai.url}/api/chat`
   const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), config.ollama.chatTimeoutMs)
+  const timer = setTimeout(() => ctrl.abort(), ai.chatTimeoutMs)
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: config.ollama.chatModel,
+        model: ai.chatModel,
         messages,
         stream: false,
       }),

@@ -44,6 +44,7 @@ export default function BubbleToolbar({ editor, mode = 'light' }) {
   return (
     <BubbleMenu
       editor={editor}
+      pluginKey="textToolbar"
       tippyOptions={{ duration: 100, placement: 'top' }}
       shouldShow={({ editor: ed, from, to }) => from !== to && !ed.isActive('codeBlock')}
     >

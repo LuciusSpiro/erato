@@ -1,9 +1,18 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { config } from './config.js'
 
-// JWKS von Keycloak (lazy; wird beim ersten geschützten Request geladen).
-// jwksUri kann intern (keycloak:8080) abweichen vom issuer (localhost:8085).
-const JWKS = createRemoteJWKSet(new URL(config.oidc.jwksUri))
+const LOCAL = config.authMode === 'local'
+
+// Fester lokaler Admin-Nutzer für den local mode (Electron/Einzelplatz):
+// kein Keycloak, kein Token — ein Nutzer, der alles darf.
+const LOCAL_USER = {
+  sub: 'local',
+  preferred_username: 'lokal',
+  realm_access: { roles: [config.oidc.adminRole] },
+}
+
+// JWKS nur im OIDC-Modus anlegen (lazy; lädt beim ersten geschützten Request).
+const JWKS = LOCAL ? null : createRemoteJWKSet(new URL(config.oidc.jwksUri))
 
 async function verify(token) {
   const { payload } = await jwtVerify(token, JWKS, { issuer: config.oidc.issuer })
@@ -16,7 +25,12 @@ function bearer(req) {
 }
 
 // Fastify preHandler: erfordert einen gültigen Token (eingeloggt).
+// Im local mode wird ohne Prüfung der feste lokale Admin gesetzt.
 export async function requireAuth(req, reply) {
+  if (LOCAL) {
+    req.user = LOCAL_USER
+    return
+  }
   const token = bearer(req)
   if (!token) return reply.code(401).send({ error: 'no token' })
   try {

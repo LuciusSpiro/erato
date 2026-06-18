@@ -18,10 +18,44 @@ jobs:
         run: npm ci
       - name: Lint Design-System (Token-Contract)
         run: npm run lint --workspace @erato/ui
+      - name: Unit-Tests (design-tokens + web-Logik)
+        run: npm run test:unit
       - name: Build Web
         run: npm run build --workspace web
       - name: Build Storybook
         run: npm run build-storybook --workspace @erato/ui
+
+  api-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install (workspaces)
+        run: npm ci
+      - name: Stack hochfahren (Postgres, Keycloak, MinIO, Ollama, API)
+        run: docker compose up -d --build erato-api
+      - name: Auf Keycloak-Realm warten
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8085/realms/erato/.well-known/openid-configuration > /dev/null && exit 0
+            sleep 3
+          done
+          echo "Keycloak nicht bereit"; docker compose logs keycloak | tail -50; exit 1
+      - name: Auf API warten
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3001/health > /dev/null && exit 0
+            sleep 2
+          done
+          echo "API nicht bereit"; docker compose logs erato-api | tail -50; exit 1
+      - name: API-Integrationstests
+        run: npm run test:api
+      - name: Aufräumen
+        if: always()
+        run: docker compose down -v
 
   docker:
     runs-on: ubuntu-latest

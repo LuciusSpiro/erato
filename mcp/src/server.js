@@ -22,7 +22,13 @@ import {
   getPage,
   createPage,
   updatePage,
+  deletePage,
+  createNotebook,
   searchDocs,
+  researchTopic,
+  upsertByPath,
+  NOTEBOOK,
+  config as eratoConfig,
 } from "./erato-client.js";
 
 const server = new McpServer({
@@ -217,13 +223,108 @@ server.registerTool(
   })
 );
 
+server.registerTool(
+  "research_topic",
+  {
+    description:
+      "Gib mir alles zum Thema X: Hybrid-Suche (Volltext + semantisch) und liefert den VOLLEN Inhalt der relevantesten Seiten in EINEM Aufruf — ideal, um vor dem Schreiben den Ist-Stand zu erfassen. Standardmaessig auf das Projekt-Notizbuch (ERATO_NOTEBOOK) eingegrenzt; mit notebook ueberschreibbar.",
+    inputSchema: {
+      query: z.string().describe("Thema/Suchanfrage, z.B. 'Authentifizierung' oder 'Datenbank-Schema'."),
+      notebook: z
+        .string()
+        .optional()
+        .describe("Optional: Notizbuch (Titel oder id) zum Eingrenzen. Default: ERATO_NOTEBOOK, sonst instanzweit. '*' erzwingt instanzweite Suche."),
+      limit: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Max. Anzahl Seiten im Volltext (Default 6)."),
+    },
+  },
+  tool(async ({ query, notebook, limit }) => {
+    const r = await researchTopic(query, { notebook, limit });
+    if (!r.results.length) {
+      return text(`Keine Treffer fuer "${r.query}"${r.scope ? ` in „${r.scope}"` : ""}.`);
+    }
+    const blocks = r.results.map(
+      (x) =>
+        `## ${x.title}  [${x.pageId}]${x.path ? ` — ${x.path}` : ""}\n\n${x.contentMd}${x.truncated ? "\n\n…(gekuerzt)" : ""}`
+    );
+    return text(
+      `${r.returned} von ${r.total} Treffern${r.scope ? ` in „${r.scope}"` : ""} zum Thema „${r.query}":\n\n${blocks.join("\n\n---\n\n")}`
+    );
+  })
+);
+
+server.registerTool(
+  "upsert_page",
+  {
+    description:
+      "IDEMPOTENT Seite anhand eines Titel-Pfads anlegen ODER aktualisieren — das bevorzugte Tool, um Doku aktuell zu halten (kein Duplikat bei wiederholtem Aufruf). path z.B. 'Architektur/Datenbank'; fehlende Zwischenseiten werden erstellt, die letzte bekommt den Inhalt. notebook ist optional, wenn ein Default-Notizbuch (ERATO_NOTEBOOK) konfiguriert ist; ein noch nicht existierendes Notizbuch wird per Titel angelegt.",
+    inputSchema: {
+      path: z
+        .string()
+        .describe("Titel-Pfad der Seite, Segmente mit '/' getrennt (z.B. 'Architektur/Datenbank')."),
+      markdown: z.string().describe("Markdown-Inhalt der Zielseite (ersetzt den bisherigen Inhalt)."),
+      notebook: z
+        .string()
+        .optional()
+        .describe("Notizbuch (Titel oder id). Optional, wenn ERATO_NOTEBOOK gesetzt ist."),
+      title: z
+        .string()
+        .optional()
+        .describe("Optionaler Anzeigetitel der Zielseite (Default: letztes Pfad-Segment)."),
+    },
+  },
+  tool(async ({ path, markdown, notebook, title }) => {
+    const res = await upsertByPath(notebook, path, { title, markdown });
+    return text(
+      `Seite ${res.created ? "angelegt" : "aktualisiert"}.\npageId: ${res.pageId}\nPfad: ${res.path}\nNotizbuch: ${res.notebookId}`
+    );
+  })
+);
+
+server.registerTool(
+  "create_notebook",
+  {
+    description: "Legt ein neues Notizbuch an und gibt dessen id zurueck.",
+    inputSchema: {
+      title: z.string().describe("Titel des Notizbuchs."),
+      icon: z.string().optional().describe("Optionales Icon (Emoji oder Name)."),
+    },
+  },
+  tool(async ({ title, icon }) => {
+    const nb = await createNotebook(title, icon);
+    return text(`Notizbuch erstellt.\nnotebookId: ${nb.id}\nTitel: ${nb.title}`);
+  })
+);
+
+server.registerTool(
+  "delete_page",
+  {
+    description:
+      "Loescht eine Seite (und alle Unterseiten) endgueltig. Fuer veraltete Doku. Erfordert die pageId.",
+    inputSchema: {
+      pageId: z.string().describe("id der zu loeschenden Seite."),
+    },
+  },
+  tool(async ({ pageId }) => {
+    await deletePage(pageId);
+    return text(`Seite geloescht (${pageId}).`);
+  })
+);
+
 // --- Start ueber stdio ---
 
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // Keine Ausgabe auf stdout (stoert das stdio-Protokoll); Logs nur auf stderr.
-  console.error("Erato MCP-Server laeuft (stdio).");
+  console.error(
+    `Erato MCP-Server laeuft (stdio). Target=${eratoConfig.TARGET}` +
+      `${NOTEBOOK ? `, Notizbuch="${NOTEBOOK}"` : ", kein Default-Notizbuch (ERATO_NOTEBOOK)"}.`
+  );
 }
 
 main().catch((err) => {

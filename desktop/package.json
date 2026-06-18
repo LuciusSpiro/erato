@@ -1,0 +1,57 @@
+{
+  "name": "erato-desktop",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Erato als lokale Einzelplatz-App (Electron, PGlite, kein Keycloak).",
+  "main": "main.js",
+  "scripts": {
+    "build:web": "vite build ../web --mode desktop --base ./ --outDir ../desktop/dist-web --emptyOutDir",
+    "start": "npm run build:web && electron .",
+    "dist": "npm run build:web && electron-builder",
+    "dist:win": "npm run build:web && electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "vite": "^7.3.5"
+  },
+  "build": {
+    "appId": "de.teckpro.erato",
+    "productName": "Erato",
+    "directories": {
+      "output": "release",
+      "buildResources": "brand"
+    },
+    "files": [
+      "main.js",
+      "preload.cjs",
+      "dist-web/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../api",
+        "to": "api",
+        "filter": ["src/**", "package.json", "node_modules/**"]
+      },
+      {
+        "from": "brand",
+        "to": "brand"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

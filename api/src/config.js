@@ -8,6 +8,24 @@ export const config = {
   // Öffentliche Basis-URL der API (für Logo-Links, die der Browser lädt).
   apiPublicUrl: env.API_PUBLIC_URL ?? `http://localhost:${Number(env.PORT ?? 3001)}`,
 
+  // Betriebsmodus: 'web' (Team, Keycloak+Postgres+MinIO) oder 'local' (Einzelplatz,
+  // Electron: PGlite + lokaler Datei-Storage + kein Keycloak).
+  mode: env.ERATO_MODE ?? 'web',
+  // Auth-Modus: 'oidc' (Keycloak) oder 'local' (fester lokaler Admin, kein Token).
+  authMode: env.AUTH_MODE ?? (env.ERATO_MODE === 'local' ? 'local' : 'oidc'),
+  // Datenspeicher: 'pg' (PostgreSQL) oder 'pglite' (eingebettetes Postgres/WASM).
+  dbMode: env.DB_MODE ?? (env.ERATO_MODE === 'local' ? 'pglite' : 'pg'),
+  // Object-Storage: 'minio' oder 'local' (Dateisystem unter localDataDir/branding).
+  storageMode: env.STORAGE_MODE ?? (env.ERATO_MODE === 'local' ? 'local' : 'minio'),
+  // Datenverzeichnis für den local mode (PGlite + Logos). Von Electron gesetzt.
+  localDataDir: env.LOCAL_DATA_DIR ?? './.erato-data',
+  // Steuert, ob AI-/LLM-Features (RAG-Chat, semantische Suche) angeboten werden:
+  // 'auto' = anhand Ollama-Erreichbarkeit proben, 'true'/'false' = erzwingen.
+  aiEnabled: env.AI_ENABLED ?? 'auto',
+  // Pfad zu einer brand.json (White-Label) für den Erststart-Seed. Von Electron
+  // gesetzt; im Web-Modus normalerweise leer (kein Seed).
+  brandConfig: env.BRAND_CONFIG ?? null,
+
   db: {
     host: env.PGHOST ?? 'localhost',
     port: Number(env.PGPORT ?? 5432),
